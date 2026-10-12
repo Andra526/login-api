@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { BooksModule } from './books/books.module.js';
 import { MembersModule } from './members/members.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
+import { SimpleLoggerMiddleware } from './middleware/simple-logger/simple-logger.middleware.js';
 
 @Module({
   imports: [
@@ -38,4 +39,8 @@ import { CategoriesModule } from './categories/categories.module.js';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SimpleLoggerMiddleware).forRoutes('*');
+  }
+}
