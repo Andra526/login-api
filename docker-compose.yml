@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:15.3-alpine
+    container_name: harkat_postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecretpassword
+      POSTGRES_DB: harkat_kelas_d
+    ports:
+      - "5432:5432"
+    volumes:
+      # menyimpan data postgresql di volume agar data tidak hilang saat container dihapus
+      - postgres_data_volume:/var/lib/postgresql/data
+
+volumes:
+  postgres_data_volume:

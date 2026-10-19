@@ -9,10 +9,40 @@ import { BooksModule } from './books/books.module.js';
 import { MembersModule } from './members/members.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { SimpleLoggerMiddleware } from './middleware/simple-logger/simple-logger.middleware.js';
+import Joi from 'joi';
+import { config } from 'process';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    BooksModule,
+    AuthModule,
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      validationSchema: Joi.object({
+        PORT: Joi.number().default(3000),
+        NODE_ENV: Joi.string().valid('development', 'production', 'staging').default('development'),
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.number().default(5432),
+        DB_USERNAME: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_DATABASE: Joi.string().required(),
+      })
+     }),
+
+     TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('DB_HOST'),
+        port: config.get('DB_PORT'),
+        username: config.get('DB_USERNAME'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_DATABASE'),
+        autoLoadEntities: true,
+        synchronize: config.get<string>('NODE_ENV') !== 'production', // Diubah dari configService ke config
+      }),
+    }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

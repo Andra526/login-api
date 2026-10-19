@@ -1,72 +1,53 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Book } from './entities/book.entity.js';
 
 @Injectable()
 export class BooksService {
-    private books: Book[] = [
-        {
-            id: 1,
-            title: 'The Great Gatsby',
-            author: 'F. Scott Fitzgerald',
-            isbn: '9780743273565',
-            publishedDate: new Date('1925-04-10'),
-            isaavailable: true,
-        },
-        {
-            id: 2,
-            title: 'To Kill a Mockingbird',
-            author: 'Harper Lee',
-            isbn: '9780061120084',
-            publishedDate: new Date('1960-07-11'),
-            isaavailable: false,
-        },
-        {
-            id: 3,
-            title: '1984',
-            author: 'George Orwell',
-            isbn: '9780451524935',
-            publishedDate: new Date('1949-06-08'),
-            isaavailable: true,
+    constructor(
+        @InjectRepository(Book)
+        private readonly booksRepository: Repository<Book>,
+    ) {}
+
+    // Mencari semua data buku
+    async findAll(): Promise<Book[]> {
+        return await this.booksRepository.find({
+            order: { id: 'DESC' }, // Ubah ke id jika entity tidak memiliki kolom createdAt
+        });
+    }
+
+    // Menyimpan data buku baru ke database
+    async create(book: Partial<Book>): Promise<Book> {
+        const newBook = this.booksRepository.create(book);
+        return await this.booksRepository.save(newBook);
+    }
+
+    // Mencari buku berdasarkan ID
+    async findById(id: string): Promise<Book> {
+        const book = await this.booksRepository.findOneBy({ id });
+        if (!book) {
+            throw new NotFoundException(`Book with ID ${id} not found`);
         }
-    ];
-
-    // Menampilkan data semua buku
-    findAll(): Book[] {
-        return this.books;
+        return book;
     }
 
-    // Menampilkan data buku berdasarkan id
-    findOne(id: number): Book | undefined {
-        return this.books.find((book) => book.id === id);
+    // Mengupdate data buku berdasarkan ID
+    async update(id: string, updatedBookDTO: Partial<Book>): Promise<Book> {
+        const book = await this.findById(id);
+
+        const updatedBook = this.booksRepository.merge(book, updatedBookDTO);
+        return await this.booksRepository.save(updatedBook);
     }
 
-    // Menyimpan data buku baru ke "database" (id auto increment)
-    create(bookData: Omit<Book, 'id'>): Book {
-        const newBook: Book = {
-            id: this.books.length
-                ? Math.max(...this.books.map((b) => b.id)) + 1
-                : 1,
-            ...bookData,
+    // Menghapus data buku berdasarkan ID
+    async delete(id: string): Promise<{ message: string; deleteId: string }> {
+        const book = await this.findById(id);
+        await this.booksRepository.softDelete(id); // Perbaikan dari softdelete ke softDelete
+
+        return {
+            message: `Book with ID ${id} has been deleted successfully.`,
+            deleteId: id,
         };
-        this.books.push(newBook);
-        return newBook;
-    }
-
-    // Mengupdate buku berdasarkan id
-    update(id: number, bookData: Partial<Book>): Book | null {
-        const index = this.books.findIndex((book) => book.id === id);
-        if (index === -1) return null;
-
-        this.books[index] = { ...this.books[index], ...bookData };
-        return this.books[index];
-    }
-
-    // Menghapus data buku berdasarkan id
-    remove(id: number): boolean {
-        const index = this.books.findIndex((book) => book.id === id);
-        if (index === -1) return false;
-
-        this.books.splice(index, 1);
-        return true;
     }
 }
